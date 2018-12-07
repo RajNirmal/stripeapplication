@@ -15,4 +15,9 @@ public class StripeConstants {
     public static final String ID = "id";
     public static final String AMOUNT = "amount";
     public static final String CURRENCY = "currency";
+
+    public static final int GOOGLE_PAY_REQUEST_CODE = 1546;
+
+    public static final int STRIPE_PAYMENT_CODE = 23;
+    public static final int GPAY_PAYMENT_CODE = 52;
 }

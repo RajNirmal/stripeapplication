@@ -1,5 +1,6 @@
 package com.example.nirmal.stripeapplication;
 
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Log;
@@ -12,6 +13,11 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.android.gms.wallet.CardRequirements;
+import com.google.android.gms.wallet.PaymentDataRequest;
+import com.google.android.gms.wallet.PaymentMethodTokenizationParameters;
+import com.google.android.gms.wallet.TransactionInfo;
+import com.google.android.gms.wallet.WalletConstants;
 import com.stripe.android.Stripe;
 import com.stripe.android.TokenCallback;
 import com.stripe.android.model.Card;
@@ -20,6 +26,7 @@ import com.stripe.android.model.Token;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -70,11 +77,13 @@ public class StripeUtil {
                 });
     }
 
-    public void chargeUser(final Context context, final int amount, final String currency, String description) throws Exception{
+    public void chargeUser(final Context context, final int amount, final String tokenId,final ProgressDialog dialog) throws Exception{
+        Log.i(StripeConstants.LOGGER_CONSTANT,"The amount to be charged is "+Float.valueOf(amount));
         StringRequest mRequest = new StringRequest(Request.Method.POST, URL2, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
                 Log.i(StripeConstants.LOGGER_CONSTANT,response.toString());
+                dialog.dismiss();
                 try {
                     JSONObject body = new JSONObject(new JSONObject(response).getString("body"));
                     //body will contain data about the amount paid and stuff
@@ -82,7 +91,7 @@ public class StripeUtil {
                     if(new JSONObject(response).getInt("statusCode") == 200) {
                         Toast.makeText(context, "Card has been charged successfully", Toast.LENGTH_LONG).show();
                     }else{
-                        Toast.makeText(context, "Payment failed charged successfully", Toast.LENGTH_LONG).show();
+                        Toast.makeText(context, "Payment failed : "+body.getString("error"), Toast.LENGTH_LONG).show();
                     }
                 }catch (JSONException e){
                     Log.e(LOGGER_CONSTANT,e.toString());
@@ -91,15 +100,15 @@ public class StripeUtil {
         }, new Response.ErrorListener(){
                 @Override
                 public void onErrorResponse(VolleyError error) {
-                    Log.i(LOGGER_CONSTANT,error.toString());
+                    Log.i(LOGGER_CONSTANT,"The error is "+error.toString());
                 }
         }){
             @Override
             protected Map<String, String> getParams() throws AuthFailureError {
                 HashMap<String,String> mParams = new HashMap<>();
-                mParams.put(ID,getToken(context));
-                mParams.put(AMOUNT, String.valueOf(amount));
-                mParams.put(CURRENCY,currency);
+                mParams.put(ID,tokenId);
+                mParams.put(AMOUNT, String.valueOf(amount*100));
+                mParams.put(CURRENCY,"usd");
                 return mParams;
             }
         };
@@ -132,5 +141,46 @@ public class StripeUtil {
 
 
 
+    public PaymentDataRequest createPaymentDataRequest(String amount, String currency) {
+        Log.i(StripeConstants.LOGGER_CONSTANT,"Creating payment request");
+        PaymentDataRequest.Builder request =PaymentDataRequest.newBuilder()
+                .setTransactionInfo(
+                        TransactionInfo.newBuilder()
+                                .setTotalPriceStatus(WalletConstants.TOTAL_PRICE_STATUS_FINAL)
+                                .setTotalPrice(amount)
+                                .setCurrencyCode(currency)
+                                .build())
+                .addAllowedPaymentMethod(WalletConstants.PAYMENT_METHOD_CARD)
+                .addAllowedPaymentMethod(WalletConstants.PAYMENT_METHOD_TOKENIZED_CARD)
+                .setCardRequirements(
+                        CardRequirements.newBuilder()
+                                .addAllowedCardNetworks(Arrays.asList(
+                                        WalletConstants.CARD_NETWORK_AMEX,
+                                        WalletConstants.CARD_NETWORK_DISCOVER,
+                                        WalletConstants.CARD_NETWORK_VISA,
+                                        WalletConstants.CARD_NETWORK_MASTERCARD))
+                                .build());
+
+        request.setPaymentMethodTokenizationParameters(createTokenizationParameters());
+        return request.build();
+    }
+
+    private PaymentMethodTokenizationParameters createTokenizationParameters() {
+        return PaymentMethodTokenizationParameters.newBuilder()
+                .setPaymentMethodTokenizationType(WalletConstants.PAYMENT_METHOD_TOKENIZATION_TYPE_PAYMENT_GATEWAY)
+                .addParameter("gateway", "stripe")
+                .addParameter("stripe:publishableKey", StripeConstants.PUBLISHABLE_KEY)
+                .addParameter("stripe:version", "2018-11-08")
+                .build();
+    }
+
+    public ProgressDialog getSpinner(Context context){
+        ProgressDialog myDialog = new ProgressDialog(context);
+        myDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
+        myDialog.setTitle("Processing payment");
+        myDialog.setMessage("Please wait");
+        myDialog.setCancelable(false);
+        return myDialog;
+    }
 
 }
