@@ -35,6 +35,7 @@ import static com.example.nirmal.stripeapplication.StripeConstants.CURRENCY;
 import static com.example.nirmal.stripeapplication.StripeConstants.ID;
 import static com.example.nirmal.stripeapplication.StripeConstants.LOGGER_CONSTANT;
 import static com.example.nirmal.stripeapplication.StripeConstants.URL2;
+import static com.example.nirmal.stripeapplication.StripeConstants.URL3;
 
 public class StripeUtil {
 
@@ -79,7 +80,7 @@ public class StripeUtil {
 
     public void chargeUser(final Context context, final int amount, final String tokenId,final ProgressDialog dialog) throws Exception{
         Log.i(StripeConstants.LOGGER_CONSTANT,"The amount to be charged is "+Float.valueOf(amount));
-        StringRequest mRequest = new StringRequest(Request.Method.POST, URL2, new Response.Listener<String>() {
+        StringRequest mRequest = new StringRequest(Request.Method.POST, URL3, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
                 Log.i(StripeConstants.LOGGER_CONSTANT,response.toString());
